@@ -1,2 +1,5 @@
 /res/example.ui
 /res/*~
+*.o
+*log
+nubix-sman

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.0 -->
+<!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkWindow" id="window">
@@ -8,33 +8,53 @@
     <property name="can_focus">False</property>
     <property name="window_position">center</property>
     <child>
-      <object class="GtkFixed">
+      <placeholder/>
+    </child>
+    <child>
+      <object class="GtkFixed" id="win_layout">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <child>
           <object class="GtkLabel" id="lbl_timestr">
-            <property name="width_request">100</property>
-            <property name="height_request">80</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Sonntag, 17. Jun 2018 02:34:59</property>
+            <property name="halign">center</property>
+            <property name="hexpand">True</property>
+            <property name="label" translatable="yes">2018-06-18 02:34:59</property>
           </object>
-          <packing>
-            <property name="x">450</property>
-          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="btn_shutdown">
+            <property name="label" translatable="yes">Shutdown</property>
+            <property name="name">btn_shutdown</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+          </object>
         </child>
         <child>
           <object class="GtkBox" id="login_box">
-            <property name="width_request">100</property>
-            <property name="height_request">80</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="halign">center</property>
             <property name="valign">center</property>
             <property name="hexpand">False</property>
             <property name="vexpand">False</property>
+            <property name="resize_mode">immediate</property>
             <property name="orientation">vertical</property>
             <property name="spacing">10</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Nubix - Login</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
             <child>
               <object class="GtkBox">
                 <property name="visible">True</property>
@@ -69,7 +89,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">0</property>
+                <property name="position">1</property>
               </packing>
             </child>
             <child>
@@ -107,7 +127,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">1</property>
+                <property name="position">2</property>
               </packing>
             </child>
             <child>
@@ -146,7 +166,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">2</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>
@@ -157,27 +177,10 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">3</property>
+                <property name="position">4</property>
               </packing>
             </child>
           </object>
-          <packing>
-            <property name="x">400</property>
-            <property name="y">300</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkButton">
-            <property name="label" translatable="yes">Shutdown</property>
-            <property name="name">btn_shutdown</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">True</property>
-          </object>
-          <packing>
-            <property name="x">946</property>
-            <property name="y">20</property>
-          </packing>
         </child>
       </object>
     </child>

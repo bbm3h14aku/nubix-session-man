@@ -13,13 +13,14 @@
 
 #include <smlog.h>
 #include <nubix.h>
+#include <widgets/bar.h>
 
 #include "pam.h"
 
 #define KEY_ENTER	65293
 #define KEY_ESC		65307
 
-#define LOGIN_UI 			"login.1024x768"
+#define LOGIN_UI 			"login.ui"
 #define WINDOW_ID			"window"
 #define USERNAME_ID			"username_txt_entry"
 #define PASSWORD_ID			"password_txt_entry"
@@ -150,8 +151,13 @@ static void start_x_server(const char *display, const char *vt)
 	x_server_pid = fork();
 	if(x_server_pid == 0)
 	{
-		char cmd[32];
+		char cmd[64];
+#ifdef DEBUG
+		snprintf(cmd, sizeof(cmd), "/usr/bin/Xephyr -ac -br -screen %s %s", config.resolution_str, config.display);
+#else
 		snprintf(cmd, sizeof(cmd), "/usr/bin/X %s %s", display, vt);
+#endif
+		smlogifoe("try to start ", cmd);
 		execl("/bin/bash", "/bin/bash", "-c", cmd, NULL);
 		printf("failed to start X-Server");
 		exit(EXIT_FAILURE);
@@ -159,6 +165,7 @@ static void start_x_server(const char *display, const char *vt)
 	else
 	{
 		//TODO: wait for xserver to start
+		smlogifo("waiting for x-server to come online ... ");
 		sleep(1);
 	}
 }
@@ -241,14 +248,17 @@ int main(int argc, char** argv)
 	pid_t clock;
 	smlogifoe("connecting with xserver on display ", config.display);
 
+#ifndef DEBUG
 	if(nubix_xprobe() != 0)
 	{
+#endif
 		signal(SIGSEGV, sig_handler);
 		signal(SIGTRAP, sig_handler);
 		start_x_server(config.display, config.vt);
 		standalone = true;
+#ifndef DEBUG
 	}
-
+#endif
 	setenv("DISPLAY", config.display, true);
 
 	smlogifo("enable multithreading");
@@ -280,6 +290,8 @@ int main(int argc, char** argv)
 	pass_txt_f = GTK_ENTRY(gtk_builder_get_object(builder, PASSWORD_ID));
 	status_l = GTK_LABEL(gtk_builder_get_object(builder, STATUS_ID));
 
+	GtkFixed *fixlay = GTK_FIXED(gtk_builder_get_object(builder, "win_layout"));
+
 	GtkButton *login = GTK_BUTTON(gtk_builder_get_object(builder, "btn_login"));
 	GtkButton *cancel = GTK_BUTTON(gtk_builder_get_object(builder, "btn_cancel"));
 	GtkButton *shutdown = GTK_BUTTON(gtk_builder_get_object(builder, "btn_shutdown"));
@@ -290,12 +302,55 @@ int main(int argc, char** argv)
 
 	// enabling fullscreen
 	GdkScreen *screen = gdk_screen_get_default();
-	char *height_cstr = strtok(config.resolution_str, "x");
-	char *width_cstr = strtok(NULL, "x");
+	char *width_cstr = strtok(config.resolution_str, "x");
+	char *height_cstr = strtok(NULL, "x");
 
 	gint height = atoi(height_cstr);
 	gint width = atoi(width_cstr);
+
+	
+	gint d_h = gdk_screen_get_height(screen);
+	gint d_w = gdk_screen_get_width(screen);
+
+	char log[128];
+	sprintf(&log, "setting virtual screen size to Width=%d, Height=%d", width, height);
+	smlogifo(log);
+
+	if(d_h != height || d_w != width)
+		smlogdbg("login window is under/over -scaled!");
+
 	gtk_widget_set_size_request(GTK_WIDGET(window), height, width);
+
+	gint box_height, box_width;
+	nubix_widget_get_preferred_size(GTK_WIDGET(box), &box_height, &box_width);
+
+	char *log_ext = (char *) malloc(sizeof(char) * 128);
+
+	smlogifo("adjusting widget position on screen ...");
+
+	gint center_h = (height / 2);
+	gint center_w = (width / 2);
+
+	gint x = center_w - (box_width / 2);
+	gint y = center_h - (box_height / 2);
+
+	gtk_fixed_move(fixlay, GTK_WIDGET(box), x, y);
+	snprintf(log_ext, 128, "moving widget login_box to x=%d y=%d", x, y);
+	smlogifo(log_ext);
+
+	gint datetime_h, datetime_w;
+	nubix_widget_get_preferred_size(GTK_WIDGET(datetime), &datetime_h, &datetime_w);
+	
+	x = center_w - (datetime_w / 2);
+	gtk_fixed_move(fixlay, GTK_WIDGET(datetime), x, 0);
+	snprintf(log_ext, 128, "moving widget datetime to x=%d y=%d", x, 0);
+	smlogifo(log_ext);
+
+	gint shutdown_h, shutdown_w;
+	nubix_widget_get_preferred_size(GTK_WIDGET(shutdown), &shutdown_w, &shutdown_h);
+	gtk_fixed_move(fixlay, GTK_WIDGET(shutdown), width - (shutdown_w * 3), 10);
+	snprintf(log_ext, 128, "moving widget shutdown to x=%d y=%d", width - shutdown_w, 10);
+	smlogifo(log_ext);
 
 	gtk_widget_show_all(GTK_WIDGET(window));
 	g_object_unref(builder);
@@ -304,7 +359,7 @@ int main(int argc, char** argv)
 	g_signal_connect(login, "clicked", G_CALLBACK(login_func), NULL);
 	g_signal_connect(cancel, "clicked", G_CALLBACK(cancel_func), NULL);
 	g_signal_connect(window, "key-release-event", G_CALLBACK(key_event), NULL);
-	g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+	g_signal_connect(window, "destroy", G_CALLBACK(system_poweroff), NULL);
 	g_signal_connect(shutdown, "clicked", G_CALLBACK(system_poweroff), NULL);
 
 	gtk_main();
