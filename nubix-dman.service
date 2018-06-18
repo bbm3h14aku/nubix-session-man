@@ -1,0 +1,9 @@
+[Unit]
+Description=Nubix Display Manager
+After=systemd-user-session.service
+
+[Service]
+ExecStart=/usr/bin/nubix/dman
+
+[Install]
+Alias=nubix-dmanger.service
