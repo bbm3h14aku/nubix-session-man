@@ -338,6 +338,9 @@ int main(int argc, char** argv)
 
 	GtkWindow *window = GTK_WINDOW(gtk_builder_get_object(builder, WINDOW_ID));
 	gtk_widget_set_name(GTK_WIDGET(window), "window");
+    gtk_window_set_decorated(window, FALSE);
+    gtk_window_set_resizable(window, FALSE);
+
 	user_txt_f = GTK_ENTRY(gtk_builder_get_object(builder, USERNAME_ID));
 	pass_txt_f = GTK_ENTRY(gtk_builder_get_object(builder, PASSWORD_ID));
 	status_l = GTK_LABEL(gtk_builder_get_object(builder, STATUS_ID));

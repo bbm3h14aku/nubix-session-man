@@ -74,7 +74,7 @@ bool login(const char *username, const char* password, pid_t *child_pid)
 	{
 		chdir(pw->pw_dir);
 
-		char *cmd = "exec /bin/bash --login xinitrc";
+		char *cmd = "exec /bin/bash --login /home/jan/nubix-workspace/xinitrc";
 		execl(pw->pw_shell, pw->pw_shell, "-c", cmd, NULL);
 		printf("Failed to start window manager");
 		exit(EXIT_FAILURE);
