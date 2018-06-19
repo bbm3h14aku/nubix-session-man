@@ -1,5 +1,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wunused-value"
 
 #include <libgen.h>
 #include <stdbool.h>
@@ -13,7 +14,6 @@
 
 #include <smlog.h>
 #include <nubix.h>
-#include <widgets/bar.h>
 
 #include "pam.h"
 
@@ -26,10 +26,10 @@
 #define PASSWORD_ID			"password_txt_entry"
 #define STATUS_ID			"status_label"
 
-#define ARG_DISPLAY "--display="
-#define ARG_VT		"--vt="
-#define ARG_RESO	"--screen-resolution="
-#define ARG_THEME	"--theme="
+#define ARG_DISPLAY 		"--display="
+#define ARG_VT				"--vt="
+#define ARG_RESO			"--screen-resolution="
+#define ARG_THEME			"--theme="
 
 
 #define DEF_DISPLAY			":1"
@@ -47,8 +47,6 @@ static pthread_t login_th;
 static gboolean continue_timer = FALSE;
 // FLAG if timer has start working
 static gboolean start_timer = FALSE;
-// FLAG if config is configured
-static gboolean cfg_configured = FALSE;
 
 static pid_t x_server_pid;
 static pid_t clock_th;
@@ -67,21 +65,60 @@ static struct _sman_config config;
 
 void preconfigure_setup(int argc, char **argv)
 {
-	FILE *cfg;
-
 	if(argc == 2)
 	{
-		if(strcmp(argv[1], "--help") == 0 || argv[1] == "-h")
+		if(strcmp(argv[1], "--help") == 0 || argv[1][1] == 'h')
 		{
-			printf("usage <config>\nusage -d <display> -v <vt> -r <screen-resolution> -t <theme>\n");
+			printf("usage %s %s %s %s\n", ARG_DISPLAY, ARG_VT, ARG_RESO, ARG_THEME);
 			exit(0);
 		}
 		else
 		{
-			cfg = fopen(argv[2], "r");
-			if(cfg != NULL)
+			//TODO: rewrite config parser. POSIX errno 14 (Bad Address)
+			smlogifoe("parsing config file ", argv[1]);
+			FILE *cfg;
+			if((cfg == fopen(argv[2], "r+")) != NULL)
 			{
-				smlogifoe("parsing config file ", argv[1]);
+				char buf[64];
+				while(fgets(buf, sizeof(buf), cfg) != NULL)
+				{
+					buf[strlen(buf) - 1] = '\0';
+					if(buf[0] == '#')
+						continue;
+					if(strncmp(buf, ARG_DISPLAY, strlen(ARG_DISPLAY)) == 0)
+					{
+						char *display = strstr((const char *) buf, (const char *) "=");
+						*display++;
+						smlogdbge("setting display to ", display);
+						strcpy((char *) config.display, display);
+					}
+					else if(strncmp(buf, ARG_VT, strlen(ARG_VT)) == 0)
+					{
+						char *vt = strstr(buf, "=");
+						*vt++;	
+						smlogdbge("setting vt to ", vt);
+						strcpy((char *) config.vt, vt);
+					}
+					else if(strncmp(buf, ARG_RESO, strlen(ARG_RESO)) == 0)
+					{
+						char *reso = strstr(buf, "=");
+						*reso++;
+						smlogdbge("setting display-resolution to ", reso);
+						strcpy((char *) config.resolution_str, reso);
+					}
+					else if(strncmp(buf, ARG_THEME, strlen(ARG_THEME)) == 0)
+					{
+						char *theme = strstr(buf, "=");
+						*theme++;
+						smlogdbge("setting theme to ", theme);
+						strcpy((char *) config.theme, theme);
+					}
+				}
+			}
+			else
+			{
+				smlogerr();
+				exit(1);
 			}
 		}
 	}
@@ -145,6 +182,7 @@ void _start_timer()
 	continue_timer = TRUE;
 }
 
+//TODO: enable precheck for xserver argument list to prevent priv-escalation
 static void start_x_server(const char *display, const char *vt)
 {
 	smlogifo("Starting xserver ... ");
@@ -152,15 +190,24 @@ static void start_x_server(const char *display, const char *vt)
 	if(x_server_pid == 0)
 	{
 		char cmd[64];
+
+		if((display != NULL && vt != NULL) && (strlen(display) > 0 && strlen(vt) > 0))
+		{
 #ifdef DEBUG
-		snprintf(cmd, sizeof(cmd), "/usr/bin/Xephyr -ac -br -screen %s %s", config.resolution_str, config.display);
+			snprintf(cmd, sizeof(cmd), "/usr/bin/Xephyr -ac -br -screen %s %s", config.resolution_str, config.display);
 #else
-		snprintf(cmd, sizeof(cmd), "/usr/bin/X %s %s", display, vt);
+			snprintf(cmd, sizeof(cmd), "/usr/bin/X %s %s", display, vt);
 #endif
-		smlogifoe("try to start ", cmd);
-		execl("/bin/bash", "/bin/bash", "-c", cmd, NULL);
-		printf("failed to start X-Server");
-		exit(EXIT_FAILURE);
+			smlogifoe("try to start ", cmd);
+			execl("/bin/bash", "/bin/bash", "-c", cmd, NULL);
+			printf("failed to start X-Server");
+			exit(EXIT_FAILURE);
+		}
+		else
+		{
+			smlogmsg(SMLOGLVL_ERR, "failed to verify display and vt.");
+			exit(1);
+		}
 	}
 	else
 	{
@@ -182,6 +229,11 @@ static void* system_poweroff(void *data)
 	smlogifo("handle system portweroff request");
 	if(x_server_pid > 0)
 		stop_x_server();
+
+	if(clock_th != 0)
+		kill(clock_th, SIGKILL);
+
+//TODO: fix Gdk-Message: Fatal IO error 11 on X server :1
 	gtk_main_quit();
 	return NULL;
 }
@@ -300,6 +352,8 @@ int main(int argc, char** argv)
 	GtkBox *box =GTK_BOX(gtk_builder_get_object(builder, "login_box"));
 	gtk_widget_set_name(GTK_WIDGET(box), "login_box");
 
+	GdkCursor *csr = gdk_cursor_new_for_display(gdk_display_get_default(), GDK_ARROW);
+
 	// enabling fullscreen
 	GdkScreen *screen = gdk_screen_get_default();
 	char *width_cstr = strtok(config.resolution_str, "x");
@@ -313,7 +367,7 @@ int main(int argc, char** argv)
 	gint d_w = gdk_screen_get_width(screen);
 
 	char log[128];
-	sprintf(&log, "setting virtual screen size to Width=%d, Height=%d", width, height);
+	sprintf((char *) &log, "setting virtual screen size to Width=%d, Height=%d", width, height);
 	smlogifo(log);
 
 	if(d_h != height || d_w != width)

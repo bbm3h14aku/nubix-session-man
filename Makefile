@@ -6,7 +6,7 @@ INCS = $(shell pkg-config --cflags gtk+-$(GTK_VERSION)) -I$(PWD)/../libnubix
 LIBS = $(shell pkg-config --libs gtk+-$(GTK_VERSION)) -lpam -pthread -L/usr/X11R6/lib -lX11 -lgthread-2.0
 
 LDFLAGS = $(LIBS) -lpam
-CFLAGS = $(INCS) -std=gnu11 -c -DDEBUG
+CFLAGS = $(INCS) -std=gnu11 -c -DDEBUG -Wall -Wextra
 
 TARGET = nubix-sman
 SERVICE_FILE = nubix-dman.service

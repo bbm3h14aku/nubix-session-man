@@ -23,7 +23,7 @@
 
 #define err(name) 															\
 	do { 																	\
-		smlog("[ %s ]\tpid=%d\t%s:%d:\t\t%s %s\n", SMLOGLVL_ERR, getpid(), __FILE__, __LINE__, name, pam_strerror(pam_handle, result)); \
+		smlog("[ %s ]\tpid=%d\t%s:%d:\t\t\t%s %s\n", SMLOGLVL_ERR, getpid(), __FILE__, __LINE__, name, pam_strerror(pam_handle, result)); \
 		end(result); 														\
 		return false;														\
 	} while(1); 															\
